@@ -1,56 +1,51 @@
-# Welcome to your Expo app 👋
+# Bento Blast
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A Block Blast–style puzzle game for iOS and Android, built with Expo SDK 57 and React Native. It runs on a physical phone through a custom development build (`expo-dev-client`), not Expo Go.
 
-## Get started
+## Daily loop
 
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
+1. Start the dev server on the PC:
 
    ```bash
    npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+2. Open the **Bento Blast** dev client on the phone and pick the PC's server. The phone and PC must be on the same Wi-Fi, and Windows Firewall must allow Node.js on private networks. If the phone can't connect, use `npx expo start --tunnel`.
+3. Edit code. Fast Refresh shows the change on the phone.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+Only rebuild the dev client when native code changes (adding a native library, or changing `app.json` plugins or permissions):
 
 ```bash
-npm run reset-project
+npx eas-cli@latest build --profile development --platform ios
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Before each commit
 
-### Other setup steps
+```bash
+npm test
+npm run typecheck
+npm run lint
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+## Other commands
 
-## Learn more
+| Command | What it does |
+| --- | --- |
+| `npm run test:watch` | Re-run tests as files change |
+| `npm run format` | Format every file with Prettier |
+| `npx expo install <package>` | Add a package at an SDK-compatible version |
+| `npx expo install --fix` | Fix package versions after an SDK upgrade |
+| `npx expo-doctor` | Check dependencies and config |
+| `npx eas-cli@latest device:create` | Register a new iPhone for dev builds |
 
-To learn more about developing your project with Expo, look at the following resources:
+## Project layout
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- `src/app/` – Expo Router screens (Home, Game, Settings)
+- `src/engine/` – pure TypeScript game logic, with tests in `__tests__/`
+- `src/store/` – `useReducer` + Context game store
+- `src/components/`, `src/hooks/` – UI
+- `src/services/` – storage, haptics and audio wrappers
+- `src/theme/` – colors and sizes
+- `assets/sounds/` – sound effects
 
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+`ios/` and `android/` are generated at build time. Don't create or edit them; configure native behavior in `app.json`.

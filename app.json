@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "bento-blast",
+    "name": "Bento Blast",
     "slug": "bento-blast",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -8,9 +8,12 @@
     "scheme": "bentoblast",
     "userInterfaceStyle": "automatic",
     "ios": {
+      "bundleIdentifier": "com.drewsteele.bentoblast",
+      "supportsTablet": false,
       "icon": "./assets/expo.icon"
     },
     "android": {
+      "package": "com.drewsteele.bentoblast",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -32,11 +35,27 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
-      ]
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": false,
+          "recordAudioAndroid": false,
+          "enableBackgroundPlayback": false
+        }
+      ],
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "20cc7601-9f8a-41ed-b301-544b708d770e"
+      }
+    },
+    "owner": "drewsteele408"
   }
 }
