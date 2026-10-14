@@ -21,7 +21,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   text: {
-    color: colors.textMuted,
+    color: colors.inkMuted,
     fontSize: 16,
     textAlign: 'center',
   },

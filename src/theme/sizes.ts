@@ -5,8 +5,8 @@ export const sizes = {
   boardPadding: 16,
   /** Gap between neighbouring cells, drawn as grid lines. */
   cellGap: 2,
-  /** Corner radius of a block, as a fraction of the cell size. */
-  cellRadius: 0.15,
+  /** A block is drawn on a grid this many art pixels wide, so it reads as pixel art at any size. */
+  blockPixels: 14,
   /** Tray pieces are drawn at this fraction of board scale. */
   trayScale: 0.6,
   /** While dragging, the piece sits this many cells above the finger. */

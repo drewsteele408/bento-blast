@@ -9,7 +9,7 @@ import { colorFor } from '@/theme';
 import { Board } from '../Board';
 
 function backgroundOf(cell: number) {
-  return StyleSheet.flatten(screen.getAllByTestId('board-cell')[cell].props.style).backgroundColor;
+  return StyleSheet.flatten(screen.getAllByTestId('cell-fill')[cell].props.style).backgroundColor;
 }
 
 describe('Board preview', () => {

@@ -1,4 +1,5 @@
 import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
@@ -9,11 +10,13 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={styles.root}>
       {/* At the root, not on the game screen, so Home can read the saved game and best score. */}
+      {/* Dark icons always: the app background is light even when the phone is in dark mode. */}
+      <StatusBar style="dark" />
       <GameProvider>
         <Stack
           screenOptions={{
             headerStyle: { backgroundColor: colors.background },
-            headerTintColor: colors.text,
+            headerTintColor: colors.ink,
             headerShadowVisible: false,
             contentStyle: { backgroundColor: colors.background },
           }}

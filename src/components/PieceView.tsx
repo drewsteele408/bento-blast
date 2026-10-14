@@ -4,7 +4,9 @@ import { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { getShape, Piece } from '@/engine';
-import { colorFor, sizes } from '@/theme';
+import { sizes } from '@/theme';
+
+import { BentoBlock } from './BentoBlock';
 
 type Props = {
   piece: Piece;
@@ -17,17 +19,15 @@ function PieceViewInner({ piece, cellSize }: Props) {
   return (
     <View style={{ width: shape.width * cellSize, height: shape.height * cellSize }}>
       {shape.cells.map(({ row, col }) => (
-        <View
+        <BentoBlock
           key={`${row}-${col}`}
+          color={piece.color}
+          size={block}
           style={[
             styles.block,
             {
               left: col * cellSize + sizes.cellGap / 2,
               top: row * cellSize + sizes.cellGap / 2,
-              width: block,
-              height: block,
-              borderRadius: cellSize * sizes.cellRadius,
-              backgroundColor: colorFor(piece.color),
             },
           ]}
         />

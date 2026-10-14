@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   title: {
-    color: colors.text,
+    color: colors.ink,
     fontSize: 40,
     fontWeight: '800',
   },
@@ -116,12 +116,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   bestLabel: {
-    color: colors.textMuted,
+    color: colors.inkMuted,
     fontSize: 15,
     textTransform: 'uppercase',
   },
   bestValue: {
-    color: colors.text,
+    color: colors.ink,
     fontSize: 32,
     fontWeight: '800',
     fontVariant: ['tabular-nums'],
@@ -141,18 +141,18 @@ const styles = StyleSheet.create({
   },
   secondary: {
     borderWidth: 2,
-    borderColor: colors.textMuted,
+    borderColor: colors.inkMuted,
   },
   pressed: {
     opacity: 0.7,
   },
   buttonText: {
-    color: colors.text,
+    color: colors.ink,
     fontSize: 20,
     fontWeight: '800',
   },
   primaryText: {
-    color: colors.background,
+    color: colors.ink,
   },
   confirmText: {
     color: colors.textMuted,

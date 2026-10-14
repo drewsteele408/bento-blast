@@ -2,10 +2,12 @@
 // the cells whose look changed.
 
 import { memo } from 'react';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { ColorId } from '@/engine';
-import { colorFor, sizes } from '@/theme';
+import { sizes } from '@/theme';
+
+import { BentoBlock } from './BentoBlock';
 
 type Props = {
   color: ColorId;
@@ -17,35 +19,26 @@ type Props = {
 };
 
 function CellView({ color, size, ghostColor = 0, clearColor = 0 }: Props) {
-  const block = {
-    width: size - sizes.cellGap,
-    height: size - sizes.cellGap,
-    margin: sizes.cellGap / 2,
-    borderRadius: size * sizes.cellRadius,
-  };
+  const block = size - sizes.cellGap;
 
   // A cell in a line about to clear lights up in the dragged piece's color, ghost cells included.
-  if (clearColor) {
-    return <View testID="board-cell" style={[block, { backgroundColor: colorFor(clearColor) }]} />;
-  }
-
   return (
-    <View testID="board-cell" style={[block, { backgroundColor: colorFor(color) }]}>
-      {ghostColor !== 0 && (
-        <View
-          testID="ghost-cell"
-          style={[
-            block,
-            {
-              margin: 0,
-              opacity: sizes.ghostOpacity,
-              backgroundColor: colorFor(ghostColor),
-            },
-          ]}
-        />
+    <View testID="board-cell" style={{ width: block, height: block, margin: sizes.cellGap / 2 }}>
+      <BentoBlock color={clearColor || color} size={block} fillTestID="cell-fill" />
+      {!clearColor && ghostColor !== 0 && (
+        <View testID="ghost-cell" style={styles.ghost}>
+          <BentoBlock color={ghostColor} size={block} />
+        </View>
       )}
     </View>
   );
 }
 
 export const Cell = memo(CellView);
+
+const styles = StyleSheet.create({
+  ghost: {
+    ...StyleSheet.absoluteFill,
+    opacity: sizes.ghostOpacity,
+  },
+});

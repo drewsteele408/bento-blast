@@ -39,7 +39,7 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
   },
   score: {
-    color: colors.text,
+    color: colors.ink,
     fontSize: 44,
     fontWeight: '800',
     fontVariant: ['tabular-nums'],
@@ -49,12 +49,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   label: {
-    color: colors.textMuted,
+    color: colors.inkMuted,
     fontSize: 13,
     textTransform: 'uppercase',
   },
   value: {
-    color: colors.text,
+    color: colors.ink,
     fontSize: 20,
     fontWeight: '700',
     fontVariant: ['tabular-nums'],

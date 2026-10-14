@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 999,
     backgroundColor: colors.accent,
-    color: colors.background,
+    color: colors.ink,
     fontSize: 15,
     fontWeight: '800',
     textTransform: 'uppercase',
