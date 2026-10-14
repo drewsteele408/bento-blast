@@ -49,22 +49,22 @@ The player drags pieces from a tray of three onto an 8×8 grid; full rows and co
 
 We target the newest Expo SDK, SDK 57 (released June 30, 2026), with a custom development build via `expo-dev-client` instead of Expo Go, so we can use any native library and stay on current SDKs. Versions get pinned when the project is created; we upgrade one SDK at a time with `npx expo install --fix`.
 
-| Area             | Choice                                                                    | Why                                                                         |
-| ---------------- | ------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| Framework        | React Native 0.86 (the version bundled with SDK 57)                       | Required; New Architecture is the default                                   |
-| Platform tooling | Expo SDK 57 + `expo-dev-client`                                           | Custom dev client on the phone, fast refresh, no Expo Go limits             |
-| Language         | TypeScript (strict mode)                                                  | Catches bugs early; good habit to learn                                     |
-| Navigation       | Expo Router (file-based)                                                  | Standard in Expo; simple Home / Game / Settings screens                     |
-| Gestures         | `react-native-gesture-handler`                                            | Smooth drag-and-drop on the UI thread                                       |
-| Animation        | `react-native-reanimated`                                                 | 60–120 fps piece dragging, snapping, clear effects                          |
-| Rendering        | React Native Views for MVP; `@shopify/react-native-skia` considered later | Views are easier to learn; Skia if we need particles or many animated cells |
-| State            | React `useReducer` + Context                                              | Built into React, no extra library; a reducer that wraps the game engine    |
-| Storage          | `react-native-mmkv` (alternative: `expo-sqlite/kv-store`)                 | Fast synchronous save of best score, settings, in-progress game             |
-| Haptics          | `expo-haptics`                                                            | Feedback on place, clear, game over                                         |
-| Audio            | `expo-audio`                                                              | Short sound effects                                                         |
+| Area             | Choice                                                                    | Why                                                                             |
+| ---------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Framework        | React Native 0.86 (the version bundled with SDK 57)                       | Required; New Architecture is the default                                       |
+| Platform tooling | Expo SDK 57 + `expo-dev-client`                                           | Custom dev client on the phone, fast refresh, no Expo Go limits                 |
+| Language         | TypeScript (strict mode)                                                  | Catches bugs early; good habit to learn                                         |
+| Navigation       | Expo Router (file-based)                                                  | Standard in Expo; simple Home / Game / Settings screens                         |
+| Gestures         | `react-native-gesture-handler`                                            | Smooth drag-and-drop on the UI thread                                           |
+| Animation        | `react-native-reanimated`                                                 | 60–120 fps piece dragging, snapping, clear effects                              |
+| Rendering        | React Native Views for MVP; `@shopify/react-native-skia` considered later | Views are easier to learn; Skia if we need particles or many animated cells     |
+| State            | React `useReducer` + Context                                              | Built into React, no extra library; a reducer that wraps the game engine        |
+| Storage          | `react-native-mmkv` (alternative: `expo-sqlite/kv-store`)                 | Fast synchronous save of best score, settings, in-progress game                 |
+| Haptics          | `expo-haptics`                                                            | Feedback on place, clear, game over                                             |
+| Audio            | `expo-audio`                                                              | Short sound effects                                                             |
 | Builds           | EAS Build (cloud), `development` profile in `eas.json`                    | Builds the iOS dev client without a Mac; install it on the iPhone from the link |
-| Testing          | Jest (`jest-expo`) + React Native Testing Library                         | Unit-test the engine, smoke-test components                                 |
-| Code quality     | ESLint + Prettier, `tsc --noEmit`                                         | Consistent style, type checks before commits                                |
+| Testing          | Jest (`jest-expo`) + React Native Testing Library                         | Unit-test the engine, smoke-test components                                     |
+| Code quality     | ESLint + Prettier, `tsc --noEmit`                                         | Consistent style, type checks before commits                                    |
 
 > **Rule of thumb:** add a library only when a milestone needs it, and record the decision in the log at the end of this doc.
 
@@ -156,7 +156,7 @@ bento-blast/
 
 ## Data models and engine API
 
-All game state is plain, serializable data, so a game can be saved to storage and restored exactly. These are draft types; field names will change as we build.
+All game state is plain, serializable data, so a game can be saved to storage and restored exactly. These are draft types; field names will change as we build. The implemented types live in `src/engine/types.ts` (see the Oct 14, 2026 decision-log entries).
 
 ```ts
 // src/engine/types.ts (draft)
@@ -278,15 +278,15 @@ Seven milestones; the game is playable end to end after M4.
 
 Each milestone ends with a "done when" check. No dates; work at your own pace.
 
-| Milestone                           | Scope                                                                                                  | Done when                                                  |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------- |
-| **M0** · Project setup and dev client | Create Expo SDK 57 TypeScript project, Git repo, ESLint/Prettier; build and install the dev client     | An edited screen updates live on your phone                |
-| **M1** · Game engine with tests       | Types, shape catalog, placement, line clears, scoring, dealing, game-over check                        | Jest tests cover every rule in this spec and pass          |
-| **M2** · Board and tray on screen     | `useReducer` + Context store, `Board`, `Cell`, `PieceTray`, `ScoreBar`; tap-to-place for debugging                    | A dealt game shows on the phone and taps place pieces      |
-| **M3** · Drag and drop                | Gesture Handler + Reanimated, finger offset, ghost preview, line highlight, snap back                  | Dragging feels smooth on the device                        |
-| **M4** · Full game loop (MVP)         | Game-over modal, restart, best score and in-progress game saved, Home screen                           | You can play a full game, close the app, and resume        |
-| **M5** · Polish                       | Clear and combo animations, score popups, haptics, sound, Settings screen                              | It feels good enough that you want to keep playing         |
-| **M6** · Extras (pick any)            | Themes, daily seeded challenge, stats screen, GitHub Actions CI, app store preparation                 | You decide                                                 |
+| Milestone                             | Scope                                                                                              | Done when                                             |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| **M0** · Project setup and dev client | Create Expo SDK 57 TypeScript project, Git repo, ESLint/Prettier; build and install the dev client | An edited screen updates live on your phone           |
+| **M1** · Game engine with tests       | Types, shape catalog, placement, line clears, scoring, dealing, game-over check                    | Jest tests cover every rule in this spec and pass     |
+| **M2** · Board and tray on screen     | `useReducer` + Context store, `Board`, `Cell`, `PieceTray`, `ScoreBar`; tap-to-place for debugging | A dealt game shows on the phone and taps place pieces |
+| **M3** · Drag and drop                | Gesture Handler + Reanimated, finger offset, ghost preview, line highlight, snap back              | Dragging feels smooth on the device                   |
+| **M4** · Full game loop (MVP)         | Game-over modal, restart, best score and in-progress game saved, Home screen                       | You can play a full game, close the app, and resume   |
+| **M5** · Polish                       | Clear and combo animations, score popups, haptics, sound, Settings screen                          | It feels good enough that you want to keep playing    |
+| **M6** · Extras (pick any)            | Themes, daily seeded challenge, stats screen, GitHub Actions CI, app store preparation             | You decide                                            |
 
 We build in seven milestones, engine first, so the game is playable end to end after M4; no coding starts until this spec is agreed.
 
@@ -306,14 +306,19 @@ Each milestone is one or more Git branches; add a decision-log entry whenever a 
 
 ### Decision log (newest first)
 
-| Date        | Decision                                                                      | Reason                                                                                                                                                        |
-| ----------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Oct 8, 2026 | State with React's built-in `useReducer` (plus Context), not Zustand, for now | Teaches React fundamentals; no extra library. Zustand stays an option later.                                                                                  |
-| Oct 8, 2026 | Basic colors and block visuals until a prototype works                        | Get the game playable first; Drew updates the look afterwards                                                                                                 |
-| Oct 8, 2026 | Board size fixed at 8×8 for now                                               | Drew's call; other sizes can come later                                                                                                                       |
-| Oct 8, 2026 | MVP deals pieces at random, with no "fair deal" guarantee                     | Drew's call for the MVP                                                                                                                                       |
-| Oct 8, 2026 | Keep the current scoring formula for now                                      | Good enough for testing the app; revisit later                                                                                                                |
-| Oct 8, 2026 | Test on an iPhone, built with EAS Build on a free Expo account                | Drew's phone is an iPhone; Xcode does not run on Windows; the free plan allows up to 15 iOS builds a month. Still needs the $99/year Apple Developer account. |
-| Oct 8, 2026 | Pure TypeScript engine separate from UI                                       | Testable without a device; easier to learn and refactor                                                                                                       |
-| Oct 8, 2026 | Expo SDK 57 with `expo-dev-client`, no Expo Go                                | Newest SDK, any native library, real-device testing                                                                                                           |
-| Oct 8, 2026 | React Native + TypeScript                                                     | Project goal; type safety                                                                                                                                     |
+| Date         | Decision                                                                                                                                                                                           | Reason                                                                                                                                                        |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Oct 14, 2026 | `GameState` stores both `seed` (starting value) and `rngState` (current, advanced after every deal) instead of `rngSeed`                                                                           | A resumed game deals exactly the pieces it would have; `seed` stays available for daily challenges                                                            |
+| Oct 14, 2026 | First clear in a streak is combo 0 (×1.0), the second in a row is combo 1 (×1.5), and so on. `GameState.combo` counts consecutive clearing placements, which is also the level the next clear uses | A single clear shouldn't already count as a combo (build-plan suggestion)                                                                                     |
+| Oct 14, 2026 | Block points (+1 per block) and the +300 board-clear bonus are not multiplied by the combo                                                                                                         | Matches the spec's wording: only the clear score is multiplied                                                                                                |
+| Oct 14, 2026 | The `cleared` event carries every cleared cell with its color (`cells: { row, col, color }[]`)                                                                                                     | The Phase 5 clear animation can draw cells after the engine has emptied them, without keeping `prevBoard` in the store                                        |
+| Oct 14, 2026 | `createGame(seed)` takes a required seed; the store passes one (e.g. `Date.now()`)                                                                                                                 | The engine never reads the clock or `Math.random`, so it can't pick a seed itself                                                                             |
+| Oct 8, 2026  | State with React's built-in `useReducer` (plus Context), not Zustand, for now                                                                                                                      | Teaches React fundamentals; no extra library. Zustand stays an option later.                                                                                  |
+| Oct 8, 2026  | Basic colors and block visuals until a prototype works                                                                                                                                             | Get the game playable first; Drew updates the look afterwards                                                                                                 |
+| Oct 8, 2026  | Board size fixed at 8×8 for now                                                                                                                                                                    | Drew's call; other sizes can come later                                                                                                                       |
+| Oct 8, 2026  | MVP deals pieces at random, with no "fair deal" guarantee                                                                                                                                          | Drew's call for the MVP                                                                                                                                       |
+| Oct 8, 2026  | Keep the current scoring formula for now                                                                                                                                                           | Good enough for testing the app; revisit later                                                                                                                |
+| Oct 8, 2026  | Test on an iPhone, built with EAS Build on a free Expo account                                                                                                                                     | Drew's phone is an iPhone; Xcode does not run on Windows; the free plan allows up to 15 iOS builds a month. Still needs the $99/year Apple Developer account. |
+| Oct 8, 2026  | Pure TypeScript engine separate from UI                                                                                                                                                            | Testable without a device; easier to learn and refactor                                                                                                       |
+| Oct 8, 2026  | Expo SDK 57 with `expo-dev-client`, no Expo Go                                                                                                                                                     | Newest SDK, any native library, real-device testing                                                                                                           |
+| Oct 8, 2026  | React Native + TypeScript                                                                                                                                                                          | Project goal; type safety                                                                                                                                     |
