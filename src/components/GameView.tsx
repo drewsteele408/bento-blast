@@ -1,11 +1,11 @@
-// The game screen's content: score bar, board and tray, plus the overlay that draws the piece
-// being dragged. Reads the store and dispatches moves.
+// The game screen's content: pause button, score bar, board and tray, the overlay that draws the
+// piece being dragged, and the pause and game-over dialogs. Reads the store and dispatches moves.
 //
 // Dragging runs on the UI thread (see useDragState). React hears about it only when the hovered
 // cell changes, to draw the ghost preview, and when a piece is released.
 
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { BOARD_SIZE, isValidMove } from '@/engine';
 import { placementPreview } from '@/hooks/placementPreview';
@@ -18,21 +18,29 @@ import {
   returnToTray,
   useDragState,
 } from '@/hooks/useDragState';
-import { useGame, useGameDispatch } from '@/store';
+import { selectBest, selectIsNewBest, useGame, useGameDispatch } from '@/store';
 import { colors, sizes } from '@/theme';
 
 import { Board } from './Board';
 import { DragLayer } from './DragLayer';
+import { GameOverModal } from './GameOverModal';
+import { PauseButton, PauseMenu } from './PauseMenu';
 import { PieceTray } from './PieceTray';
 import { ScoreBar } from './ScoreBar';
 
-/** Space taken by the status bar, header and home indicator, roughly. */
+/** Space taken by the status bar, pause button row and home indicator, roughly. */
 const SCREEN_CHROME_HEIGHT = 160;
 /** Board rows plus the tray (5 cells at tray scale) plus about 2 rows for the score and text. */
 const ROWS_OF_CONTENT = BOARD_SIZE + 5 * sizes.trayScale + 2;
 
-export function GameView() {
-  const { game } = useGame();
+type Props = {
+  /** Leave the game screen. The game stays saved. */
+  onHome: () => void;
+};
+
+export function GameView({ onHome }: Props) {
+  const store = useGame();
+  const { game } = store;
   const dispatch = useGameDispatch();
   const { width, height } = useWindowDimensions();
 
@@ -79,20 +87,43 @@ export function GameView() {
     if (drag.phase.get() === DragPhase.dropping) endDrag(drag);
   }, [game, drag]);
 
+  const [paused, setPaused] = useState(false);
+  // Set when heading home: hides the dialogs before the screen goes away.
+  const [leaving, setLeaving] = useState(false);
+
+  const onPause = () => {
+    // A finger is still holding a piece; pausing now would leave it hanging under the menu.
+    if (drag.phase.get() !== DragPhase.idle) return;
+    setPaused(true);
+  };
+
+  const onRestart = () => {
+    setPaused(false);
+    endDrag(drag);
+    dispatch({ type: 'newGame', seed: Date.now() });
+  };
+
+  const goHome = () => {
+    if (leaving) return;
+    setPaused(false);
+    setLeaving(true);
+    // Leave on the next frame, once the dialog is hidden: a Modal still showing while its
+    // screen is popped can get stuck on iOS.
+    requestAnimationFrame(onHome);
+  };
+
   return (
     <View style={styles.container}>
-      <View style={{ width: boardWidth }}>
-        <ScoreBar score={game.score} best={0} combo={game.combo} />
+      <View style={[styles.top, { width: boardWidth }]}>
+        <View style={styles.pauseRow}>
+          <PauseButton onPress={onPause} disabled={game.isOver} />
+        </View>
+        <ScoreBar score={game.score} best={selectBest(store)} combo={game.combo} />
       </View>
 
       {/* Board and tray must stay direct children of this view: drag coordinates come from
           their onLayout, relative to it. */}
-      <Board
-        board={game.board}
-        cellSize={cellSize}
-        preview={preview}
-        onLayout={onBoardLayout}
-      />
+      <Board board={game.board} cellSize={cellSize} preview={preview} onLayout={onBoardLayout} />
 
       <PieceTray
         tray={game.tray}
@@ -105,31 +136,28 @@ export function GameView() {
         onLayout={onTrayLayout}
       />
 
-      {game.isOver && (
-        <Text testID="game-over" style={styles.gameOver}>
-          Game over
-        </Text>
-      )}
-
-      {__DEV__ && (
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => {
-            endDrag(drag);
-            dispatch({ type: 'newGame', seed: Date.now() });
-          }}
-          style={styles.debugButton}
-        >
-          <Text style={styles.debugText}>Debug: new game</Text>
-        </Pressable>
-      )}
-
       <DragLayer
         tray={game.tray}
         moves={game.moves}
         cellSize={cellSize}
         drag={drag}
         onHover={onHover}
+      />
+
+      <PauseMenu
+        visible={paused && !game.isOver && !leaving}
+        onResume={() => setPaused(false)}
+        onRestart={onRestart}
+        onHome={goHome}
+      />
+
+      <GameOverModal
+        visible={game.isOver && !leaving}
+        score={game.score}
+        best={selectBest(store)}
+        isNewBest={selectIsNewBest(store)}
+        onRestart={onRestart}
+        onHome={goHome}
       />
     </View>
   );
@@ -142,17 +170,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-evenly',
     backgroundColor: colors.background,
   },
-  gameOver: {
-    color: colors.accent,
-    fontSize: 24,
-    fontWeight: '800',
+  top: {
+    gap: 8,
   },
-  debugButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-  },
-  debugText: {
-    color: colors.textMuted,
-    fontSize: 14,
+  pauseRow: {
+    flexDirection: 'row',
   },
 });

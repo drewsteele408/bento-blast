@@ -10,3 +10,4 @@ export { SHAPES, getShape, hasShape } from './pieces';
 export { dealTray, dealPiece } from './dealer';
 export { createGame, placePiece, hasAnyValidMove, isValidMove } from './game';
 export type { MoveResult } from './game';
+export { isValidGameState } from './validate';

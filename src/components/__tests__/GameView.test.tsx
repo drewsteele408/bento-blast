@@ -1,10 +1,13 @@
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { StyleSheet } from 'react-native';
 import { State, type PanGesture } from 'react-native-gesture-handler';
 import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
-import { createGame, getShape } from '@/engine';
-import { GameProvider } from '@/store';
+import { Dispatch, useEffect } from 'react';
+
+import { createGame, GameState, getShape } from '@/engine';
+import { saveGame, setBestScore, storage } from '@/services/storage';
+import { GameAction, GameProvider, useGameDispatch } from '@/store';
 import { sizes } from '@/theme';
 
 import { GameView } from '../GameView';
@@ -17,10 +20,29 @@ const firstShape = shapeIn(0);
 /** Where the tests lay out the tray, relative to the screen root. The board sits at (0, 0). */
 const TRAY_Y = 1000;
 
+const onHome = jest.fn();
+let dispatch: Dispatch<GameAction>;
+
+/** Hands the store's dispatch to the test, to set up states that are slow to reach by dragging. */
+function CaptureDispatch() {
+  const storeDispatch = useGameDispatch();
+  // In an effect: render must not touch outside variables.
+  useEffect(() => {
+    dispatch = storeDispatch;
+  }, [storeDispatch]);
+  return null;
+}
+
+beforeEach(() => {
+  storage.clearAll();
+  onHome.mockClear();
+});
+
 async function renderGame() {
   await render(
     <GameProvider initialSeed={SEED}>
-      <GameView />
+      <GameView onHome={onHome} />
+      <CaptureDispatch />
     </GameProvider>,
   );
   // Jest runs no layout pass, so report positions the way the device would.
@@ -134,5 +156,107 @@ describe('GameView', () => {
     }
     // A fresh set of three.
     for (const n of [1, 2, 3]) expect(screen.getByLabelText(`Tray piece ${n}`)).toBeTruthy();
+  });
+});
+
+/**
+ * A saved game one move from the end: empty cells in a checkerboard (no line can fill, no 3×3
+ * fits), an S1 that fits and an SQ3 that doesn't. Placing the S1 ends the game.
+ */
+function oneMoveFromGameOver(score: number): GameState {
+  return {
+    ...createGame(SEED),
+    board: Array.from({ length: 64 }, (_, i) => ((Math.floor(i / 8) + (i % 8)) % 2 === 0 ? 0 : 1)),
+    tray: [{ shapeId: 'S1', color: 2 }, { shapeId: 'SQ3', color: 3 }, null],
+    score,
+    moves: 20,
+  };
+}
+
+async function playLastMove() {
+  await act(async () => dispatch({ type: 'placePiece', trayIndex: 0, row: 0, col: 0 }));
+}
+
+describe('GameView: game over', () => {
+  it('shows no dialogs while playing', async () => {
+    await renderGame();
+    expect(screen.queryByTestId('game-over')).toBeNull();
+    expect(screen.queryByTestId('pause-menu')).toBeNull();
+  });
+
+  it('shows the modal with the final score when no piece fits', async () => {
+    setBestScore(500);
+    saveGame(oneMoveFromGameOver(40));
+    await renderGame();
+    await playLastMove();
+
+    expect(screen.getByTestId('game-over')).toBeTruthy();
+    expect(screen.getByTestId('final-score')).toHaveTextContent('41');
+    expect(screen.getByTestId('final-best')).toHaveTextContent('500');
+    expect(screen.queryByTestId('new-best')).toBeNull();
+    expect(screen.getByLabelText('Pause')).toBeDisabled();
+  });
+
+  it('awards "New best!" when the final score beats the best', async () => {
+    setBestScore(30);
+    saveGame(oneMoveFromGameOver(40));
+    await renderGame();
+    await playLastMove();
+
+    expect(screen.getByTestId('new-best')).toBeTruthy();
+    expect(screen.getByTestId('final-best')).toHaveTextContent('41');
+  });
+
+  it('Restart starts a new game', async () => {
+    saveGame(oneMoveFromGameOver(40));
+    await renderGame();
+    await playLastMove();
+    await fireEvent.press(screen.getByRole('button', { name: 'Restart' }));
+
+    expect(screen.queryByTestId('game-over')).toBeNull();
+    expect(screen.getByTestId('score')).toHaveTextContent('0');
+    // The finished game's score is now the best.
+    expect(screen.getByText('41')).toBeTruthy();
+  });
+
+  it('Home leaves the screen', async () => {
+    saveGame(oneMoveFromGameOver(40));
+    await renderGame();
+    await playLastMove();
+    await fireEvent.press(screen.getByRole('button', { name: 'Home' }));
+    await waitFor(() => expect(onHome).toHaveBeenCalledTimes(1));
+    // Hidden first, so it isn't left over the screen while it's popped.
+    expect(screen.queryByTestId('game-over')).toBeNull();
+  });
+});
+
+describe('GameView: pause', () => {
+  it('Resume closes the menu and keeps the game', async () => {
+    saveGame({ ...createGame(SEED), score: 77, moves: 5 });
+    await renderGame();
+    await fireEvent.press(screen.getByLabelText('Pause'));
+    expect(screen.getByTestId('pause-menu')).toBeTruthy();
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Resume' }));
+    expect(screen.queryByTestId('pause-menu')).toBeNull();
+    expect(screen.getByTestId('score')).toHaveTextContent('77');
+  });
+
+  it('Restart starts a new game', async () => {
+    saveGame({ ...createGame(SEED), score: 77, moves: 5 });
+    await renderGame();
+    await fireEvent.press(screen.getByLabelText('Pause'));
+    await fireEvent.press(screen.getByRole('button', { name: 'Restart' }));
+
+    expect(screen.queryByTestId('pause-menu')).toBeNull();
+    expect(screen.getByTestId('score')).toHaveTextContent('0');
+  });
+
+  it('Home leaves the screen', async () => {
+    await renderGame();
+    await fireEvent.press(screen.getByLabelText('Pause'));
+    await fireEvent.press(screen.getByRole('button', { name: 'Home' }));
+    await waitFor(() => expect(onHome).toHaveBeenCalledTimes(1));
+    expect(screen.queryByTestId('pause-menu')).toBeNull();
   });
 });

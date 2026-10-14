@@ -2,21 +2,29 @@ import { Stack } from 'expo-router';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { GameProvider } from '@/store';
 import { colors } from '@/theme';
 
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={styles.root}>
-      <Stack
-        screenOptions={{
-          headerStyle: { backgroundColor: colors.background },
-          headerTintColor: colors.text,
-          headerShadowVisible: false,
-          contentStyle: { backgroundColor: colors.background },
-        }}
-      >
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-      </Stack>
+      {/* At the root, not on the game screen, so Home can read the saved game and best score. */}
+      <GameProvider>
+        <Stack
+          screenOptions={{
+            headerStyle: { backgroundColor: colors.background },
+            headerTintColor: colors.text,
+            headerShadowVisible: false,
+            contentStyle: { backgroundColor: colors.background },
+          }}
+        >
+          <Stack.Screen name="index" options={{ headerShown: false }} />
+          {/* No header (the pause menu leads home) and no iOS swipe-back, which could fire
+              while dragging a piece near the left edge. */}
+          <Stack.Screen name="game" options={{ headerShown: false, gestureEnabled: false }} />
+          <Stack.Screen name="settings" options={{ title: 'Settings' }} />
+        </Stack>
+      </GameProvider>
     </GestureHandlerRootView>
   );
 }

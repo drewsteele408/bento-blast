@@ -74,7 +74,7 @@ export function isValidMove(
  *
  * An invalid move (bad index, empty slot, doesn't fit, game already over) returns the same
  * state object and no events; it does not throw. Corrupt state (e.g. an unknown shape id
- * from a bad save) does throw, so restore code should validate saved games with `hasShape`.
+ * from a bad save) does throw, so restore code should check saved games with `isValidGameState`.
  */
 export function placePiece(
   state: GameState,

@@ -2,7 +2,14 @@ import { createGame, emptyBoard, GameState, Piece } from '@/engine';
 import { deepFreeze, parseBoard } from '@/engine/debug';
 import { seedToState } from '@/engine/rng';
 
-import { gameReducer, GameStoreState, initGameStore } from '../gameReducer';
+import {
+  gameReducer,
+  GameStoreState,
+  initGameStore,
+  selectBest,
+  selectHasGameInProgress,
+  selectIsNewBest,
+} from '../gameReducer';
 
 const p = (shapeId: string, color = 1): Piece => ({ shapeId, color });
 
@@ -20,8 +27,8 @@ function makeGame(overrides: Partial<GameState> = {}): GameState {
   };
 }
 
-function makeStore(overrides: Partial<GameState> = {}): GameStoreState {
-  return deepFreeze({ game: makeGame(overrides), lastEvents: [] });
+function makeStore(overrides: Partial<GameState> = {}, best = 0): GameStoreState {
+  return deepFreeze({ game: makeGame(overrides), lastEvents: [], best });
 }
 
 describe('initGameStore', () => {
@@ -29,6 +36,11 @@ describe('initGameStore', () => {
     const store = initGameStore(42);
     expect(store.game).toEqual(createGame(42));
     expect(store.lastEvents).toEqual([]);
+    expect(store.best).toBe(0);
+  });
+
+  it('starts from the given best score', () => {
+    expect(initGameStore(42, 900).best).toBe(900);
   });
 });
 
@@ -37,11 +49,21 @@ describe('gameReducer: newGame', () => {
     const before = deepFreeze({
       game: makeGame({ score: 500, moves: 12 }),
       lastEvents: [{ type: 'gameOver' as const, finalScore: 500 }],
+      best: 0,
     });
     const after = gameReducer(before, { type: 'newGame', seed: 7 });
     expect(after.game).toEqual(createGame(7));
     expect(after.game.score).toBe(0);
     expect(after.lastEvents).toEqual([]);
+  });
+
+  it('folds the score of the game it replaces into best', () => {
+    expect(gameReducer(makeStore({ score: 500 }, 300), { type: 'newGame', seed: 7 }).best).toBe(
+      500,
+    );
+    expect(gameReducer(makeStore({ score: 200 }, 300), { type: 'newGame', seed: 7 }).best).toBe(
+      300,
+    );
   });
 });
 
@@ -124,9 +146,44 @@ describe('gameReducer: restore', () => {
     const before = deepFreeze({
       game: createGame(3),
       lastEvents: [{ type: 'gameOver' as const, finalScore: 0 }],
+      best: 800,
     });
     const after = gameReducer(before, { type: 'restore', game: saved });
     expect(after.game).toBe(saved);
     expect(after.lastEvents).toEqual([]);
+    expect(after.best).toBe(800);
+  });
+});
+
+describe('gameReducer: best score', () => {
+  it('keeps best through moves; the current score is folded in only by newGame', () => {
+    const after = gameReducer(makeStore({}, 0), {
+      type: 'placePiece',
+      trayIndex: 0,
+      row: 0,
+      col: 0,
+    });
+    expect(after.game.score).toBe(1);
+    expect(after.best).toBe(0);
+    expect(selectBest(after)).toBe(1);
+  });
+});
+
+describe('selectors', () => {
+  it('selectBest is the higher of best and the current score', () => {
+    expect(selectBest(makeStore({ score: 50 }, 100))).toBe(100);
+    expect(selectBest(makeStore({ score: 150 }, 100))).toBe(150);
+  });
+
+  it('selectIsNewBest is true only when the score beats the earlier best', () => {
+    expect(selectIsNewBest(makeStore({ score: 150 }, 100))).toBe(true);
+    expect(selectIsNewBest(makeStore({ score: 100 }, 100))).toBe(false);
+    expect(selectIsNewBest(makeStore({ score: 0 }, 0))).toBe(false);
+  });
+
+  it('selectHasGameInProgress needs at least one move and a game that is not over', () => {
+    expect(selectHasGameInProgress(makeStore({ moves: 0 }))).toBe(false);
+    expect(selectHasGameInProgress(makeStore({ moves: 3 }))).toBe(true);
+    expect(selectHasGameInProgress(makeStore({ moves: 3, isOver: true }))).toBe(false);
   });
 });
