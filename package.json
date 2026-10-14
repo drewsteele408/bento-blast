@@ -58,7 +58,13 @@
     "test:watch": "jest --watch"
   },
   "jest": {
-    "preset": "jest-expo"
+    "preset": "jest-expo",
+    "setupFiles": [
+      "./node_modules/react-native-gesture-handler/jestSetup.js"
+    ],
+    "setupFilesAfterEnv": [
+      "./jest.setup.ts"
+    ]
   },
   "private": true
 }

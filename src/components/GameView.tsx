@@ -1,22 +1,30 @@
-// The game screen's content: score bar, board and tray. Reads the store and dispatches moves.
+// The game screen's content: score bar, board and tray, plus the overlay that draws the piece
+// being dragged. Reads the store and dispatches moves.
 //
-// Phase 2 input is a debug tap-to-place mode (dev builds only): tap a tray piece to pick it,
-// then tap a board cell to place it with that cell as the piece's top-left.
-// Drag and drop replaces this as the real input in Phase 3.
+// Dragging runs on the UI thread (see useDragState). React hears about it only when the hovered
+// cell changes, to draw the ghost preview, and when a piece is released.
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
-import { BOARD_SIZE, Tray } from '@/engine';
+import { BOARD_SIZE, isValidMove } from '@/engine';
+import { placementPreview } from '@/hooks/placementPreview';
+import {
+  DragPhase,
+  endDrag,
+  NO_HOVER,
+  parseHoverKey,
+  pieceToken,
+  returnToTray,
+  useDragState,
+} from '@/hooks/useDragState';
 import { useGame, useGameDispatch } from '@/store';
 import { colors, sizes } from '@/theme';
 
 import { Board } from './Board';
+import { DragLayer } from './DragLayer';
 import { PieceTray } from './PieceTray';
 import { ScoreBar } from './ScoreBar';
-
-/** Turns on tap-to-place. Dev builds only; it stays useful for testing later phases. */
-const TAP_TO_PLACE = __DEV__;
 
 /** Space taken by the status bar, header and home indicator, roughly. */
 const SCREEN_CHROME_HEIGHT = 160;
@@ -36,38 +44,40 @@ export function GameView() {
     ),
   );
   const boardWidth = cellSize * BOARD_SIZE + sizes.cellGap;
+  const { drag, onBoardLayout, onTrayLayout } = useDragState(cellSize);
 
-  // The picked slot is tied to the tray it was picked from. Every real move gives the engine a
-  // new tray object, so a placement (or a new deal or game) drops the selection by itself,
-  // while an invalid tap leaves the tray alone and keeps the piece picked.
-  const [selected, setSelected] = useState<{ index: number; tray: Tray } | null>(null);
-  const selectedIndex = selected?.tray === game.tray ? selected.index : null;
+  // The hovered slot and cell, as a hoverKey. Changes only when the piece crosses a cell.
+  const [hover, setHover] = useState(NO_HOVER);
+  const hovered = parseHoverKey(hover);
+  const hoveredPiece = hovered ? game.tray[hovered.slot] : null;
+  const preview =
+    hovered && hoveredPiece
+      ? placementPreview(game.board, hoveredPiece, hovered.row, hovered.col)
+      : null;
 
-  const onSlotPress = useCallback(
-    (index: number) =>
-      setSelected((current) =>
-        current?.index === index && current.tray === game.tray ? null : { index, tray: game.tray },
-      ),
-    [game.tray],
-  );
+  const onHover = (key: number) => {
+    // A hover that arrives after the drop belongs to a drag that's over; with a fresh deal in
+    // the same slot, it would flash a ghost of the new piece.
+    if (key !== NO_HOVER && drag.phase.get() !== DragPhase.dragging) return;
+    setHover(key);
+  };
 
-  // Read the selection through a ref so onCellPress never changes and the memoized cells
-  // don't re-render when a piece is picked. The reducer ignores invalid moves.
-  const selectedRef = useRef(selectedIndex);
+  const onDrop = (index: number, token: number, row: number, col: number) => {
+    setHover(NO_HOVER);
+    // A stale token means the gesture was built for a tray that has since changed.
+    if (token !== pieceToken(game.moves, index) || !isValidMove(game, index, row, col)) {
+      returnToTray(drag);
+      return;
+    }
+    // The drag stays in the dropping phase (lock held, overlay showing the piece) until this
+    // placement has rendered; the effect below frees it. The overlay and tray slot hide by
+    // token, so they switch over in the same render that draws the piece on the board.
+    dispatch({ type: 'placePiece', trayIndex: index, row, col });
+  };
+
   useEffect(() => {
-    selectedRef.current = selectedIndex;
-  }, [selectedIndex]);
-
-  const onCellPress = useCallback(
-    (row: number, col: number) => {
-      const trayIndex = selectedRef.current;
-      if (trayIndex === null) return;
-      dispatch({ type: 'placePiece', trayIndex, row, col });
-    },
-    [dispatch],
-  );
-
-  const canPick = TAP_TO_PLACE && !game.isOver;
+    if (drag.phase.get() === DragPhase.dropping) endDrag(drag);
+  }, [game, drag]);
 
   return (
     <View style={styles.container}>
@@ -75,18 +85,24 @@ export function GameView() {
         <ScoreBar score={game.score} best={0} combo={game.combo} />
       </View>
 
+      {/* Board and tray must stay direct children of this view: drag coordinates come from
+          their onLayout, relative to it. */}
       <Board
         board={game.board}
         cellSize={cellSize}
-        onCellPress={TAP_TO_PLACE ? onCellPress : undefined}
+        preview={preview}
+        onLayout={onBoardLayout}
       />
 
       <PieceTray
         tray={game.tray}
+        moves={game.moves}
         width={boardWidth}
         boardCellSize={cellSize}
-        selectedIndex={canPick ? selectedIndex : null}
-        onSlotPress={canPick ? onSlotPress : undefined}
+        drag={drag}
+        enabled={!game.isOver}
+        onDrop={onDrop}
+        onLayout={onTrayLayout}
       />
 
       {game.isOver && (
@@ -95,15 +111,26 @@ export function GameView() {
         </Text>
       )}
 
-      {TAP_TO_PLACE && (
+      {__DEV__ && (
         <Pressable
           accessibilityRole="button"
-          onPress={() => dispatch({ type: 'newGame', seed: Date.now() })}
+          onPress={() => {
+            endDrag(drag);
+            dispatch({ type: 'newGame', seed: Date.now() });
+          }}
           style={styles.debugButton}
         >
           <Text style={styles.debugText}>Debug: new game</Text>
         </Pressable>
       )}
+
+      <DragLayer
+        tray={game.tray}
+        moves={game.moves}
+        cellSize={cellSize}
+        drag={drag}
+        onHover={onHover}
+      />
     </View>
   );
 }

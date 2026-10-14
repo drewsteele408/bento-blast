@@ -11,4 +11,6 @@ export const sizes = {
   trayScale: 0.6,
   /** While dragging, the piece sits this many cells above the finger. */
   dragOffsetCells: 1.5,
+  /** Opacity of the ghost a hovering piece draws on the board. */
+  ghostOpacity: 0.45,
 } as const;

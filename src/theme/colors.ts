@@ -33,6 +33,4 @@ export const colors = {
   text: '#FFFFFF',
   textMuted: '#9AA0BC',
   accent: '#FFB13B',
-  /** Outline of the tray slot picked in tap-to-place debug mode. */
-  selected: '#FFFFFF',
 } as const;
