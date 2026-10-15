@@ -163,6 +163,8 @@ export function GameView({ onHome }: Props) {
       <PieceTray
         tray={game.tray}
         moves={game.moves}
+        // The RNG state only advances when a tray is dealt, and every new game starts a new one.
+        dealKey={game.rngState}
         width={boardWidth}
         boardCellSize={cellSize}
         drag={drag}

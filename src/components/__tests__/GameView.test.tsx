@@ -80,7 +80,7 @@ async function dragPiece(slotIndex: number, dx: number, dy: number) {
 
 const dragFirstPiece = (dx: number, dy: number) => dragPiece(0, dx, dy);
 
-/** The (dx, dy) that puts a tray piece's top-left on board cell (row, col). */
+/** The finger movement (dx, dy) that puts a tray piece's top-left on board cell (row, col). */
 function dragTo(row: number, col: number, slotIndex = 0) {
   const cellSize = sizeOf('board-cell').width + sizes.cellGap;
   const slot = sizeOf('tray-slot-0');
@@ -89,9 +89,10 @@ function dragTo(row: number, col: number, slotIndex = 0) {
   const height = shape.height * cellSize;
   const cellX = sizes.cellGap / 2 + col * cellSize;
   const cellY = sizes.cellGap / 2 + row * cellSize;
+  // The piece moves `dragSpeed` times as far as the finger.
   return {
-    dx: cellX - (slotIndex * slot.width + slot.width / 2 - width / 2),
-    dy: cellY - (TRAY_Y + slot.height / 2 - height / 2),
+    dx: (cellX - (slotIndex * slot.width + slot.width / 2 - width / 2)) / sizes.dragSpeed,
+    dy: (cellY - (TRAY_Y + slot.height / 2 - height / 2)) / sizes.dragSpeed,
   };
 }
 
@@ -120,7 +121,8 @@ describe('GameView', () => {
     const cellSize = sizeOf('board-cell').width + sizes.cellGap;
     const { dx, dy } = dragTo(2, 3);
     // A third of a cell off in both directions still lands on (2, 3).
-    await dragFirstPiece(dx + cellSize / 3, dy - cellSize / 3);
+    const nudge = cellSize / 3 / sizes.dragSpeed;
+    await dragFirstPiece(dx + nudge, dy - nudge);
     expect(screen.getByTestId('score')).toHaveTextContent(String(firstShape.cells.length));
   });
 
@@ -137,6 +139,43 @@ describe('GameView', () => {
     await dragFirstPiece(2, 2);
     expect(screen.getByTestId('score')).toHaveTextContent('0');
     expect(screen.getByLabelText('Tray piece 1')).toBeTruthy();
+  });
+
+  it('sends the piece back when the drag is cancelled, even over a free spot', async () => {
+    await renderGame();
+    const { dx, dy } = dragTo(2, 3);
+    const slot = sizeOf('tray-slot-0');
+    const touch = { x: slot.width / 2, y: slot.height / 2 };
+    // The system takes the touch (notification shade, edge swipe) while the piece is over the board.
+    fireGestureHandler<PanGesture>(getByGestureTestId('tray-pan-0'), [
+      { state: State.BEGAN, ...touch },
+      { state: State.ACTIVE, ...touch },
+      { state: State.ACTIVE, ...touch, translationX: dx, translationY: dy },
+      { state: State.CANCELLED, ...touch, translationX: dx, translationY: dy },
+    ]);
+    await act(async () => {});
+    expect(screen.getByTestId('score')).toHaveTextContent('0');
+
+    // The drag was freed: the same piece can still be placed there.
+    await dragFirstPiece(dx, dy);
+    expect(screen.getByTestId('score')).toHaveTextContent(String(firstShape.cells.length));
+  });
+
+  it('gives the tray fresh slots for each deal, but keeps them between moves', async () => {
+    await renderGame();
+    const tagOf = () => getByGestureTestId('tray-pan-0').handlerTag;
+    const original = tagOf();
+
+    // A move without a new deal keeps the slots (a finger may already be on the next piece).
+    const { dx, dy } = dragTo(0, 3, 1);
+    await dragPiece(1, dx, dy);
+    expect(screen.getByTestId('score')).not.toHaveTextContent(/^0$/);
+    expect(tagOf()).toBe(original);
+
+    // A new game deals a new tray into new slots, so a slot that broke can't outlive it.
+    await act(async () => dispatch({ type: 'newGame', seed: SEED + 1 }));
+    expect(tagOf()).not.toBe(original);
+    for (const n of [1, 2, 3]) expect(screen.getByLabelText(`Tray piece ${n}`)).toBeTruthy();
   });
 
   it('frees the drag after a drop, then deals a new tray once all three are placed', async () => {

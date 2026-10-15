@@ -15,6 +15,7 @@ import {
   DragState,
   hoveredCell,
   isAway,
+  moveDrag,
   pickUp,
   pieceToken,
   returnToTray,
@@ -81,8 +82,7 @@ export function DraggablePiece({
       height: pieceHeight,
       startScale,
     });
-    drag.x.set(startX + tx);
-    drag.y.set(startY + ty);
+    moveDrag(drag, tx, ty);
     pickUp(drag, index, token);
   };
 
@@ -99,18 +99,17 @@ export function DraggablePiece({
       // once it has landed, instead of being ignored until it lifts.
       if (drag.phase.get() === DragPhase.idle) claim(e.x, e.y, e.translationX, e.translationY);
       if (drag.slot.get() !== index || drag.phase.get() !== DragPhase.dragging) return;
-      const origin = drag.origin.get();
-      drag.x.set(origin.startX + e.translationX);
-      drag.y.set(origin.startY + e.translationY);
+      moveDrag(drag, e.translationX, e.translationY);
     })
-    .onEnd((e) => {
+    .onEnd((e, success) => {
       if (drag.slot.get() !== index || drag.phase.get() !== DragPhase.dragging) return;
-      // A tap: leave the phase alone and onFinalize sends the piece back.
+      // Cancelled (the system took the touch, or the slot was disabled): not a drop, wherever
+      // the finger was. Leave the phase alone and onFinalize sends the piece back.
+      if (!success) return;
+      // A tap: likewise.
       if (Math.hypot(e.translationX, e.translationY) < TAP_SLOP) return;
       // Use the release point itself, in case no update arrived after the last move.
-      const origin = drag.origin.get();
-      drag.x.set(origin.startX + e.translationX);
-      drag.y.set(origin.startY + e.translationY);
+      moveDrag(drag, e.translationX, e.translationY);
       const { row, col } = hoveredCell(drag);
       drag.phase.set(DragPhase.dropping);
       scheduleOnRN(onDrop, index, token, row, col);

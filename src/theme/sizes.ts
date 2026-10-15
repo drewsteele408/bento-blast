@@ -13,6 +13,11 @@ export const sizes = {
   trayScale: 0.6,
   /** While dragging, the piece sits this many cells above the finger. */
   dragOffsetCells: 1.5,
+  /**
+   * A dragged piece moves this many times as far as the finger, so a short swipe from the tray
+   * reaches the whole board. 1 keeps the piece under the finger.
+   */
+  dragSpeed: 1.4,
   /** Opacity of the ghost a hovering piece draws on the board. */
   ghostOpacity: 0.45,
 } as const;

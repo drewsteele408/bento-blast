@@ -26,6 +26,12 @@ type Props = {
   tray: Tray;
   /** Moves made so far, for `pieceToken`. */
   moves: number;
+  /**
+   * Changes whenever a new tray is dealt, including for a new game. The slots are remounted
+   * then, so each deal gets fresh views and gesture handlers: a slot whose UI-thread callbacks
+   * broke (as a hot reload can do) recovers on the next deal instead of staying dead.
+   */
+  dealKey: number;
   /** Width of the whole tray (the board width). */
   width: number;
   boardCellSize: number;
@@ -40,6 +46,7 @@ type Props = {
 export function PieceTray({
   tray,
   moves,
+  dealKey,
   width,
   boardCellSize,
   drag,
@@ -53,7 +60,7 @@ export function PieceTray({
     <View testID="piece-tray" onLayout={onLayout} style={[styles.tray, { width }]}>
       {tray.map((piece, index) => (
         <DraggablePiece
-          key={index}
+          key={`${dealKey}-${index}`}
           index={index}
           piece={piece}
           token={pieceToken(moves, index)}

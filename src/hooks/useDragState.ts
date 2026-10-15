@@ -66,7 +66,10 @@ export function useDragState(cellSize: number) {
      * this, and `claim` ignores them.
      */
     moves: useSharedValue(-1),
-    /** The finger. */
+    /**
+     * The drag point: the finger's start plus its movement times `sizes.dragSpeed`, so it runs
+     * ahead of the finger. The piece is drawn from it.
+     */
     x: useSharedValue(0),
     y: useSharedValue(0),
     /** 0 = sitting in the tray at tray scale, 1 = picked up at board scale above the finger. */
@@ -90,9 +93,9 @@ export function useDragState(cellSize: number) {
 export type DragState = ReturnType<typeof useDragState>['drag'];
 
 /** Lift animation when a piece is picked up. */
-const LIFT_MS = 120;
+const LIFT_MS = 70;
 /** Spring back to the tray: quick, with no bounce past the slot. */
-const RETURN_SPRING = { duration: 300, dampingRatio: 1 } as const;
+const RETURN_SPRING = { duration: 180, dampingRatio: 1 } as const;
 
 /**
  * Top-left of the dragged piece at board scale. At lift 0 it sits centered on its tray slot;
@@ -164,6 +167,17 @@ export function parseHoverKey(key: number): { slot: number; row: number; col: nu
     row: (Math.floor(key / 10) % 10) - 1,
     col: (key % 10) - 1,
   };
+}
+
+/**
+ * Moves the drag point for a finger that has moved (tx, ty) since `origin` was set. The piece
+ * travels `sizes.dragSpeed` times as far as the finger.
+ */
+export function moveDrag(drag: DragState, tx: number, ty: number) {
+  'worklet';
+  const origin = drag.origin.get();
+  drag.x.set(origin.startX + tx * sizes.dragSpeed);
+  drag.y.set(origin.startY + ty * sizes.dragSpeed);
 }
 
 /** Starts the pick-up animation. Call after setting `origin`, `x` and `y`. */
