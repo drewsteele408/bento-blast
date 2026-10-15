@@ -7,6 +7,7 @@ import {
   GameStoreState,
   initGameStore,
   selectBest,
+  selectCanResetBest,
   selectHasGameInProgress,
   selectIsNewBest,
 } from '../gameReducer';
@@ -166,6 +167,35 @@ describe('gameReducer: best score', () => {
     expect(after.game.score).toBe(1);
     expect(after.best).toBe(0);
     expect(selectBest(after)).toBe(1);
+  });
+
+  it('resetBest forgets the best but keeps the game, whose score still counts', () => {
+    const store = makeStore({ score: 40, moves: 3 }, 900);
+    const after = gameReducer(store, { type: 'resetBest', seed: 5 });
+    expect(after.best).toBe(0);
+    expect(after.game).toBe(store.game);
+    expect(selectBest(after)).toBe(40);
+  });
+
+  it('resetBest after game over replaces the finished game, so its score stops counting', () => {
+    const store = makeStore({ score: 500, moves: 30, isOver: true }, 300);
+    expect(selectCanResetBest(store)).toBe(true);
+    const after = gameReducer(store, { type: 'resetBest', seed: 5 });
+    expect(after.game).toEqual(createGame(5));
+    expect(after.best).toBe(0);
+    expect(selectBest(after)).toBe(0);
+    expect(selectCanResetBest(after)).toBe(false);
+  });
+
+  it('resetBest works on the first game ever once it has ended', () => {
+    const store = makeStore({ score: 120, moves: 12, isOver: true }, 0);
+    expect(selectBest(gameReducer(store, { type: 'resetBest', seed: 5 }))).toBe(0);
+  });
+
+  it('resetBest with nothing to reset returns the same state', () => {
+    const store = makeStore({ score: 40, moves: 3 }, 0);
+    expect(selectCanResetBest(store)).toBe(false);
+    expect(gameReducer(store, { type: 'resetBest', seed: 5 })).toBe(store);
   });
 });
 

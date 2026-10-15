@@ -16,6 +16,7 @@ import {
   hoveredCell,
   isAway,
   pickUp,
+  pieceToken,
   returnToTray,
 } from '@/hooks/useDragState';
 
@@ -64,6 +65,8 @@ export function DraggablePiece({
   const claim = (x: number, y: number, tx: number, ty: number) => {
     'worklet';
     if (drag.phase.get() !== DragPhase.idle) return;
+    // Callbacks from a render before the last move: their piece and board are out of date.
+    if (token !== pieceToken(drag.moves.get(), index)) return;
     // The slot's top-left in root coordinates: slots sit side by side in the tray row.
     const tray = drag.tray.get();
     const slotX = tray.x + index * width;

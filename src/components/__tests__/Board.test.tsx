@@ -4,7 +4,7 @@ import { StyleSheet } from 'react-native';
 import { emptyBoard, idx } from '@/engine';
 import { parseBoard } from '@/engine/debug';
 import { placementPreview } from '@/hooks/placementPreview';
-import { colorFor } from '@/theme';
+import { boardRim, colorFor, colors, sizes } from '@/theme';
 
 import { Board } from '../Board';
 
@@ -45,5 +45,21 @@ describe('Board preview', () => {
   it('draws no preview without one', async () => {
     await render(<Board board={emptyBoard()} cellSize={40} />);
     expect(screen.queryAllByTestId('ghost-cell')).toHaveLength(0);
+  });
+});
+
+describe('Board box', () => {
+  it('sets the cells into a wooden floor inside the lacquer rim', async () => {
+    await render(<Board board={emptyBoard()} cellSize={40} />);
+    const rim = boardRim(40);
+    const floor = 40 * 8 + sizes.cellGap;
+
+    expect(rim).toBeGreaterThan(0);
+    expect(StyleSheet.flatten(screen.getByTestId('board').props.style).width).toBe(floor + rim * 2);
+    expect(StyleSheet.flatten(screen.getByTestId('board-floor').props.style)).toMatchObject({
+      width: floor,
+      margin: rim,
+      backgroundColor: colors.wood,
+    });
   });
 });

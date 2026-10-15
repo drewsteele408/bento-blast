@@ -7,6 +7,8 @@ export const sizes = {
   cellGap: 2,
   /** A block is drawn on a grid this many art pixels wide, so it reads as pixel art at any size. */
   blockPixels: 14,
+  /** The board's lacquer rim is this many art pixels thick: outline, lacquer, lacquer, lip. */
+  boardRimPixels: 4,
   /** Tray pieces are drawn at this fraction of board scale. */
   trayScale: 0.6,
   /** While dragging, the piece sits this many cells above the finger. */

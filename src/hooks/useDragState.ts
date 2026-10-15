@@ -59,6 +59,13 @@ export function useDragState(cellSize: number) {
     slot: useSharedValue(-1),
     /** `pieceToken` of the dragged piece; -1 when idle. */
     token: useSharedValue(-1),
+    /**
+     * Moves of the game React last rendered (-1 until the first render's effect). Gesture
+     * Handler swaps in each render's callbacks a little after the drag lock is freed, so for a
+     * moment a tray slot can still run the last render's callbacks; their token won't match
+     * this, and `claim` ignores them.
+     */
+    moves: useSharedValue(-1),
     /** The finger. */
     x: useSharedValue(0),
     y: useSharedValue(0),

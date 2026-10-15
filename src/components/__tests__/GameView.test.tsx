@@ -5,12 +5,12 @@ import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-han
 
 import { Dispatch, useEffect } from 'react';
 
-import { createGame, GameState, getShape } from '@/engine';
+import { applyPiece, canPlace, createGame, GameState, getShape } from '@/engine';
 import { saveGame, setBestScore, storage } from '@/services/storage';
 import { GameAction, GameProvider, useGameDispatch } from '@/store';
 import { sizes } from '@/theme';
 
-import { GameView } from '../GameView';
+import { GAME_OVER_DELAY_MS, GameView } from '../GameView';
 
 const SEED = 1;
 const firstTray = createGame(SEED).tray;
@@ -173,11 +173,115 @@ function oneMoveFromGameOver(score: number): GameState {
   };
 }
 
+/** Plays the move that ends the game, then waits out the pause before the modal. */
 async function playLastMove() {
   await act(async () => dispatch({ type: 'placePiece', trayIndex: 0, row: 0, col: 0 }));
+  await screen.findByTestId('game-over', {}, { timeout: GAME_OVER_DELAY_MS + 1000 });
 }
 
+describe('GameView: stale gesture callbacks', () => {
+  /**
+   * Gesture Handler swaps in each render's callbacks a moment after the drag lock is freed, so a
+   * finger already on the next piece can run the previous render's callbacks, with the board
+   * from before the last move. Such a drop must never leave the game locked.
+   */
+  it('ignores a drag that runs callbacks from before the last move, and keeps playing', async () => {
+    await renderGame();
+    const pan1 = getByGestureTestId('tray-pan-1');
+    const staleHandlers = pan1.handlers;
+    const boardBefore = createGame(SEED).board;
+
+    // Place slot 0 at (0, 0).
+    const first = dragTo(0, 0);
+    await dragFirstPiece(first.dx, first.dy);
+    const score = firstShape.cells.length;
+    expect(screen.getByTestId('score')).toHaveTextContent(String(score));
+
+    // A spot for slot 1 that was free before that move but is taken now.
+    const shape1 = shapeIn(1);
+    const boardAfter = applyPiece(boardBefore, firstShape, 0, 0, 1);
+    const taken = findSpot(
+      (r, c) => canPlace(boardBefore, shape1, r, c) && !canPlace(boardAfter, shape1, r, c),
+    );
+
+    // Drag slot 1 there with the old callbacks, as in the window before they're swapped.
+    const freshHandlers = pan1.handlers;
+    pan1.handlers = staleHandlers;
+    const stale = dragTo(taken.row, taken.col, 1);
+    await dragPiece(1, stale.dx, stale.dy);
+    pan1.handlers = freshHandlers;
+    expect(screen.getByTestId('score')).toHaveTextContent(String(score));
+
+    // Not locked: slot 1 can still be placed on a free spot.
+    const free = findSpot((r, c) => canPlace(boardAfter, shape1, r, c));
+    const ok = dragTo(free.row, free.col, 1);
+    await dragPiece(1, ok.dx, ok.dy);
+    expect(screen.getByTestId('score')).not.toHaveTextContent(String(score));
+  });
+});
+
+function findSpot(fits: (row: number, col: number) => boolean) {
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 8; col++) if (fits(row, col)) return { row, col };
+  }
+  throw new Error('no spot');
+}
+
+describe('GameView: move effects', () => {
+  /** The effects are decorative and hidden from screen readers, so queries must opt in. */
+  const HIDDEN = { includeHiddenElements: true };
+
+  /** Row 0 full but for its last cell, and an S1 to fill it. The block in the bottom corner
+   * keeps it from being a board clear. */
+  function oneCellFromClear(): GameState {
+    return {
+      ...createGame(SEED),
+      board: Array.from({ length: 64 }, (_, i) => (i < 7 || i === 63 ? 1 : 0)),
+      tray: [{ shapeId: 'S1', color: 2 }, { shapeId: 'S1', color: 3 }, null],
+      moves: 4,
+    };
+  }
+
+  it('plays the clear animation and score popup after a move that clears a line', async () => {
+    saveGame(oneCellFromClear());
+    await renderGame();
+    expect(screen.queryByTestId('board-effects', HIDDEN)).toBeNull();
+
+    await act(async () => dispatch({ type: 'placePiece', trayIndex: 0, row: 0, col: 7 }));
+    expect(screen.getAllByTestId('clear-cell', HIDDEN)).toHaveLength(8);
+    expect(screen.getByTestId('score-popup', HIDDEN)).toHaveTextContent('+11');
+  });
+
+  it('does not replay the last move when the screen opens again', async () => {
+    saveGame(oneCellFromClear());
+    // The store lives in the root layout and outlasts the game screen, so only GameView remounts.
+    const ui = (showGame: boolean) => (
+      <GameProvider initialSeed={SEED}>
+        {showGame && <GameView onHome={onHome} />}
+        <CaptureDispatch />
+      </GameProvider>
+    );
+    await render(ui(true));
+    await act(async () => dispatch({ type: 'placePiece', trayIndex: 0, row: 0, col: 7 }));
+    expect(screen.getByTestId('board-effects', HIDDEN)).toBeTruthy();
+
+    await screen.rerender(ui(false));
+    await screen.rerender(ui(true));
+    expect(screen.queryByTestId('board-effects', HIDDEN)).toBeNull();
+  });
+});
+
 describe('GameView: game over', () => {
+  it('waits a moment before the modal, so the last move can be seen', async () => {
+    saveGame(oneMoveFromGameOver(40));
+    await renderGame();
+    await act(async () => dispatch({ type: 'placePiece', trayIndex: 0, row: 0, col: 0 }));
+    expect(screen.queryByTestId('game-over')).toBeNull();
+    expect(
+      await screen.findByTestId('game-over', {}, { timeout: GAME_OVER_DELAY_MS + 1000 }),
+    ).toBeTruthy();
+  });
+
   it('shows no dialogs while playing', async () => {
     await renderGame();
     expect(screen.queryByTestId('game-over')).toBeNull();

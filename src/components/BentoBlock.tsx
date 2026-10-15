@@ -8,10 +8,10 @@
 // Food art (PNG sprites) can later sit on top of the fill.
 
 import { memo } from 'react';
-import { PixelRatio, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 
 import { ColorId } from '@/engine';
-import { colors, rampFor, sizes } from '@/theme';
+import { artPixel, colors, rampFor } from '@/theme';
 
 type Props = {
   color: ColorId;
@@ -22,11 +22,6 @@ type Props = {
   /** testID for the fill layer, whose background is the block's color. */
   fillTestID?: string;
 };
-
-/** Size of one art pixel, snapped to device pixels so edges stay crisp. Never below 1pt. */
-export function artPixel(size: number): number {
-  return Math.max(1, PixelRatio.roundToNearestPixel(size / sizes.blockPixels));
-}
 
 function BentoBlockInner({ color, size, style, fillTestID }: Props) {
   const ramp = rampFor(color);

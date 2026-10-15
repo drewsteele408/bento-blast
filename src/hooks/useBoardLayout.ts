@@ -6,7 +6,7 @@
 import { LayoutChangeEvent } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 
-import { sizes } from '@/theme';
+import { boardRim, sizes } from '@/theme';
 
 import { BoardLayout } from './screenToCell';
 
@@ -19,8 +19,9 @@ export function useBoardLayout(cellSize: number) {
 
   const onBoardLayout = (e: LayoutChangeEvent) => {
     const { x, y } = e.nativeEvent.layout;
-    // The board has half a grid gap of padding before the first cell.
-    layout.set({ x: x + sizes.cellGap / 2, y: y + sizes.cellGap / 2, cellSize });
+    // The first cell sits inside the lacquer rim, after half a grid gap of wood.
+    const offset = boardRim(cellSize) + sizes.cellGap / 2;
+    layout.set({ x: x + offset, y: y + offset, cellSize });
   };
 
   return { layout, onBoardLayout };

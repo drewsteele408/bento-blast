@@ -1,4 +1,5 @@
 import { act, render } from '@testing-library/react-native';
+import * as Haptics from 'expo-haptics';
 import { Dispatch, useEffect } from 'react';
 
 import { BOARD_SIZE, createGame, GameState, isValidMove, placePiece, TRAY_SIZE } from '@/engine';
@@ -6,6 +7,13 @@ import { getBestScore, loadGame, saveGame, setBestScore, storage } from '@/servi
 
 import { GameAction } from '../gameReducer';
 import { GameProvider, useGame, useGameDispatch } from '../GameProvider';
+
+jest.mock('expo-haptics', () => ({
+  impactAsync: jest.fn(() => Promise.resolve()),
+  notificationAsync: jest.fn(() => Promise.resolve()),
+  ImpactFeedbackStyle: { Light: 'light', Medium: 'medium' },
+  NotificationFeedbackType: { Warning: 'warning' },
+}));
 
 let dispatch: Dispatch<GameAction>;
 let game: GameState;
@@ -121,5 +129,42 @@ describe('GameProvider persistence', () => {
     await act(async () => dispatch({ type: 'newGame', seed: 8 }));
     expect(getBestScore()).toBe(250);
     expect(loadGame()).toEqual(createGame(8));
+  });
+
+  it('writes a reset best score to disk', async () => {
+    setBestScore(700);
+    await renderProvider();
+    await act(async () => dispatch({ type: 'resetBest', seed: 2 }));
+    expect(getBestScore()).toBe(0);
+  });
+
+  it('writes 0 when the best is reset right after a game that set it', async () => {
+    setBestScore(10);
+    saveGame(oneMoveFromGameOver(40));
+    await renderProvider();
+    await act(async () => dispatch({ type: 'placePiece', trayIndex: 0, row: 0, col: 0 }));
+    expect(getBestScore()).toBe(41);
+
+    await act(async () => dispatch({ type: 'resetBest', seed: 2 }));
+    expect(getBestScore()).toBe(0);
+  });
+});
+
+describe('GameProvider haptics', () => {
+  const impact = Haptics.impactAsync as jest.Mock;
+
+  beforeEach(() => impact.mockClear());
+
+  it('plays one haptic per valid move, and none on mount, invalid moves or new games', async () => {
+    await renderProvider();
+    expect(impact).not.toHaveBeenCalled();
+
+    await act(async () => dispatch({ type: 'placePiece', ...firstMove(game) }));
+    expect(impact).toHaveBeenCalledTimes(1);
+
+    // Off the board: invalid.
+    await act(async () => dispatch({ type: 'placePiece', trayIndex: 1, row: 99, col: 99 }));
+    await act(async () => dispatch({ type: 'newGame', seed: 4 }));
+    expect(impact).toHaveBeenCalledTimes(1);
   });
 });

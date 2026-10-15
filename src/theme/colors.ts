@@ -11,7 +11,7 @@ export type Ramp = { readonly light: string; readonly base: string; readonly dar
  * piece colors the dealer hands out, each themed on a bento food.
  */
 export const blockRamps: readonly Ramp[] = [
-  { light: '#2A2F45', base: '#2A2F45', dark: '#2A2F45' }, // 0 empty: drawn flat, base only
+  { light: '#2E2629', base: '#2E2629', dark: '#2E2629' }, // 0 empty: drawn flat, base only
   { light: '#FF9A8A', base: '#E8574A', dark: '#9E2A2B' }, // 1 umeboshi / salmon
   { light: '#FFC680', base: '#F28C28', dark: '#A34F14' }, // 2 carrot
   { light: '#FFF4B0', base: '#F7D046', dark: '#B0841A' }, // 3 tamagoyaki
@@ -42,6 +42,13 @@ export const colors = {
   /** Pastel yellow behind every screen. */
   background: '#FFF3C4',
   boardBackground: '#1D2135',
+  /** The board's black lacquer rim: `lacquerLight` catches the light along its top edge. */
+  lacquer: '#221C1F',
+  lacquerLight: '#4D4347',
+  /** The lip where the rim drops down to the board floor. */
+  lacquerDark: '#0B0809',
+  /** The wooden dividers between board cells. */
+  wood: '#B98550',
   /** The 1-pixel outline around every block. */
   blockOutline: '#120B0E',
   gridLine: '#151829',
@@ -52,4 +59,12 @@ export const colors = {
   ink: '#3B3024',
   inkMuted: '#6E5F45',
   accent: '#FFB13B',
+  /** Destructive actions, e.g. Reset best score. Readable on the dark cards. */
+  danger: '#FF8A7A',
+  /** A switch's track when it's off. */
+  switchOff: '#3A3F5A',
+  /** Score popups and banners over the board. */
+  popupText: '#FFFFFF',
+  /** The hard pixel shadow under popup text. */
+  popupShadow: '#120B0E',
 } as const;

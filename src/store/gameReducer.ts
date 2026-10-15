@@ -18,7 +18,12 @@ export type GameStoreState = {
 export type GameAction =
   | { type: 'newGame'; seed: number }
   | { type: 'placePiece'; trayIndex: number; row: number; col: number }
-  | { type: 'restore'; game: GameState };
+  | { type: 'restore'; game: GameState }
+  /**
+   * Forgets the best score (Settings). A finished game still in the store is replaced by a fresh
+   * one from `seed`, so its score stops counting; a game in progress can still set a new best.
+   */
+  | { type: 'resetBest'; seed: number };
 
 export function initGameStore(seed: number, best = 0): GameStoreState {
   return { game: createGame(seed), lastEvents: [], best };
@@ -41,6 +46,11 @@ export function gameReducer(state: GameStoreState, action: GameAction): GameStor
     case 'restore':
       return { ...state, game: action.game, lastEvents: [] };
 
+    case 'resetBest':
+      if (!selectCanResetBest(state)) return state;
+      // Nobody can see or continue a finished game, so swapping it out loses nothing.
+      return state.game.isOver ? initGameStore(action.seed, 0) : { ...state, best: 0 };
+
     default:
       return state;
   }
@@ -54,6 +64,11 @@ export function selectBest(state: GameStoreState): number {
 /** True when the current game has beaten the best of all earlier games. */
 export function selectIsNewBest(state: GameStoreState): boolean {
   return state.game.score > state.best;
+}
+
+/** True when `resetBest` would change anything: a stored best, or a finished game's score. */
+export function selectCanResetBest(state: GameStoreState): boolean {
+  return state.best > 0 || (state.game.isOver && state.game.score > 0);
 }
 
 /** True when there's a game worth continuing: started and not over. */
