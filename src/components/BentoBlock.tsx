@@ -1,17 +1,23 @@
-// One block drawn as a pixel-art bento compartment, from a few flat, square-cornered Views laid on
-// a grid `sizes.blockPixels` art pixels wide:
+// One block drawn as a pixel-art bento compartment, from flat, square-cornered Views laid on a
+// grid `sizes.blockPixels` art pixels wide:
 //
-//   outline (stepped corners) → lacquer rim with a highlight along the top → recessed fill with a
-//   shadow under the rim → a shine pixel on the food. Empty cells are a plain flat square.
+//   outline (stepped corners) → lacquer rim in the block's color, lit along the top → dark
+//   recessed compartment with a shadow under the rim → the block's food sprite on top.
+//   Empty cells are a plain flat square.
+//
+// The food is drawn as Views, not an image: images get smoothed when scaled, which blurs pixel
+// art, while Views snapped to whole art pixels stay crisp at any size.
 //
 // Shared by board cells and pieces, so the tray, the dragged piece and the board all match.
-// Food art (PNG sprites) can later sit on top of the fill.
 
 import { memo } from 'react';
 import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 
 import { ColorId } from '@/engine';
-import { artPixel, colors, rampFor } from '@/theme';
+import { artPixel, colors, rampFor, spriteFor } from '@/theme';
+
+/** The food sprite starts this many art pixels in from the block's edge: outline, then rim. */
+const FOOD_INSET = 2;
 
 type Props = {
   color: ColorId;
@@ -19,11 +25,11 @@ type Props = {
   size: number;
   /** Positions the block, e.g. inside a piece. */
   style?: StyleProp<ViewStyle>;
-  /** testID for the fill layer, whose background is the block's color. */
-  fillTestID?: string;
+  /** testID for the layer whose background is the block's color (the rim's dark shade). */
+  colorTestID?: string;
 };
 
-function BentoBlockInner({ color, size, style, fillTestID }: Props) {
+function BentoBlockInner({ color, size, style, colorTestID }: Props) {
   const ramp = rampFor(color);
   const p = artPixel(size);
 
@@ -31,8 +37,8 @@ function BentoBlockInner({ color, size, style, fillTestID }: Props) {
   if (color === 0) {
     return (
       <View
-        testID={fillTestID}
-        style={[{ width: size, height: size, backgroundColor: ramp.base }, style]}
+        testID={colorTestID}
+        style={[{ width: size, height: size, backgroundColor: ramp.dark }, style]}
       />
     );
   }
@@ -42,8 +48,8 @@ function BentoBlockInner({ color, size, style, fillTestID }: Props) {
       {/* Outline: two overlapping bars leave each corner pixel out, a stepped pixel corner. */}
       <View style={[styles.layer, { left: p, right: p, top: 0, bottom: 0 }, styles.outline]} />
       <View style={[styles.layer, { left: 0, right: 0, top: p, bottom: p }, styles.outline]} />
-      {/* Lacquer rim, lit along the top. */}
-      <View style={[styles.layer, inset(p), { backgroundColor: ramp.dark }]} />
+      {/* Lacquer rim in the block's color, lit along the top. */}
+      <View testID={colorTestID} style={[styles.layer, inset(p), { backgroundColor: ramp.dark }]} />
       <View
         style={[
           styles.layer,
@@ -51,26 +57,31 @@ function BentoBlockInner({ color, size, style, fillTestID }: Props) {
           { backgroundColor: ramp.light },
         ]}
       />
-      {/* The compartment, with the rim's shadow falling across its top row. */}
-      <View
-        testID={fillTestID}
-        style={[styles.layer, inset(2 * p), { backgroundColor: ramp.base }]}
-      />
+      {/* The dark compartment, with the rim's shadow falling across its top row. */}
+      <View style={[styles.layer, inset(2 * p), styles.compartment]} />
       <View
         style={[
           styles.layer,
           { left: 2 * p, right: 2 * p, top: 2 * p, height: p },
-          { backgroundColor: ramp.dark },
+          styles.compartmentShadow,
         ]}
       />
-      {/* Shine on the food. */}
-      <View
-        style={[
-          styles.layer,
-          { left: 4 * p, top: 4 * p, width: 2 * p, height: p },
-          { backgroundColor: ramp.light },
-        ]}
-      />
+      {/* The food, as merged rectangles of whole art pixels. */}
+      {spriteFor(color).map((r, i) => (
+        <View
+          key={i}
+          style={[
+            styles.layer,
+            {
+              left: (FOOD_INSET + r.x) * p,
+              top: (FOOD_INSET + r.y) * p,
+              width: r.w * p,
+              height: r.h * p,
+              backgroundColor: r.color,
+            },
+          ]}
+        />
+      ))}
     </View>
   );
 }
@@ -85,5 +96,11 @@ const styles = StyleSheet.create({
   },
   outline: {
     backgroundColor: colors.blockOutline,
+  },
+  compartment: {
+    backgroundColor: colors.compartment,
+  },
+  compartmentShadow: {
+    backgroundColor: colors.compartmentShadow,
   },
 });

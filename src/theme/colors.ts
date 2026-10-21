@@ -12,13 +12,13 @@ export type Ramp = { readonly light: string; readonly base: string; readonly dar
  */
 export const blockRamps: readonly Ramp[] = [
   { light: '#2E2629', base: '#2E2629', dark: '#2E2629' }, // 0 empty: drawn flat, base only
-  { light: '#FF9A8A', base: '#E8574A', dark: '#9E2A2B' }, // 1 umeboshi / salmon
+  { light: '#FF9A8A', base: '#E8574A', dark: '#9E2A2B' }, // 1 umeboshi
   { light: '#FFC680', base: '#F28C28', dark: '#A34F14' }, // 2 carrot
   { light: '#FFF4B0', base: '#F7D046', dark: '#B0841A' }, // 3 tamagoyaki
-  { light: '#B4EC92', base: '#5DB84A', dark: '#2E6E2C' }, // 4 edamame
-  { light: '#FFFFFF', base: '#E6E0D2', dark: '#9C927E' }, // 5 rice
-  { light: '#C9A6F5', base: '#8A5CC9', dark: '#4E2F80' }, // 6 ube
-  { light: '#FFC2DE', base: '#F07AB0', dark: '#A8406E' }, // 7 sakura denbu
+  { light: '#B4EC92', base: '#5DB84A', dark: '#2E6E2C' }, // 4 broccoli
+  { light: '#FFFFFF', base: '#E6E0D2', dark: '#9C927E' }, // 5 onigiri
+  { light: '#C9A6F5', base: '#8A5CC9', dark: '#4E2F80' }, // 6 sweet potato
+  { light: '#FFC2DE', base: '#F07AB0', dark: '#A8406E' }, // 7 sakura
 ];
 
 if (blockRamps.length !== COLOR_COUNT + 1) {
@@ -51,6 +51,10 @@ export const colors = {
   wood: '#B98550',
   /** The 1-pixel outline around every block. */
   blockOutline: '#120B0E',
+  /** The dark compartment inside every block, where the food sits. */
+  compartment: '#2E2629',
+  /** The rim's shadow across the top row of the compartment. */
+  compartmentShadow: '#1A1416',
   gridLine: '#151829',
   /** Text on dark surfaces: dialogs, the pause button. */
   text: '#FFFFFF',

@@ -24,7 +24,7 @@ function CellView({ color, size, ghostColor = 0, clearColor = 0 }: Props) {
   // A cell in a line about to clear lights up in the dragged piece's color, ghost cells included.
   return (
     <View testID="board-cell" style={{ width: block, height: block, margin: sizes.cellGap / 2 }}>
-      <BentoBlock color={clearColor || color} size={block} fillTestID="cell-fill" />
+      <BentoBlock color={clearColor || color} size={block} colorTestID="cell-color" />
       {!clearColor && ghostColor !== 0 && (
         <View testID="ghost-cell" style={styles.ghost}>
           <BentoBlock color={ghostColor} size={block} />
